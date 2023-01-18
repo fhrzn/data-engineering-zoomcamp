@@ -1,0 +1,133 @@
+################
+#              #
+# SQL HOMEWORK #
+#              #
+################
+# How many taxi trips were totally made on January 15?
+SELECT count(1) 
+FROM green_taxi_data 
+WHERE lpep_pickup_datetime  
+    BETWEEN '2019-01-15 00:00:00' 
+    AND '2019-01-15 23:59:59' 
+
+# Which was the day with the largest trip distance?
+SELECT lpep_pickup_datetime, MAX(trip_distance) AS max_dist 
+FROM green_taxi_data 
+GROUP BY lpep_pickup_datetime 
+ORDER BY max_dist DESC 
+LIMIT 5;
+
+# In 2019-01-01 how many trips had 2 and 3 passengers?
+# 2 passengers
+SELECT count(1)
+FROM green_taxi_data
+WHERE (lpep_pickup_datetime 
+BETWEEN '2019-01-01 00:00:00'
+AND '2019-01-01 23:59:59')
+AND passenger_count=2
+# 3 passengers
+SELECT count(1)
+FROM green_taxi_data
+WHERE (lpep_pickup_datetime 
+BETWEEN '2019-01-01 00:00:00'
+AND '2019-01-01 23:59:59')
+AND passenger_count=3
+
+# For the passengers picked up in the Astoria Zone which was the drop up zone that had the largest tip?
+SELECT tz."Zone", MAX(gtd.tip_amount) AS max_tip
+FROM green_taxi_trips gtd
+LEFT JOIN taxi_zone tz
+	ON gtd."DOLocationID" = tz."LocationID"
+WHERE gtd."PULocationID" = 7
+GROUP BY tz."Zone"
+ORDER BY max_tip DESC
+LIMIT 5;
+
+
+
+#################
+#               #
+# DOCKER SCRIPT #
+#               #
+#################
+# running a container
+docker run hello-world
+
+# running a container with interactive mode
+docker run -it alpine
+
+# build a container
+docker build -t test:pandas .
+
+# run a container with command line arguments
+docker run -it test:pandas 2021-01-15 123 hello
+
+# run postgresql container
+docker run -it \
+-e POSTGRES_USER="root" \               # environment variables
+-e POSTGRES_PASSWORD="root" \
+-e POSTGRES_DB="ny_taxi" \
+-v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \       # volume
+-p 5432:5432 \                          # port
+postgres:13                             # image
+
+# run pgadmin4 container
+docker run -it \
+-e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+-e PGADMIN_DEFAULT_PASSWORD="root" \
+-p 8080:80 \
+dpage/pgadmin4
+
+# create docker network
+docker network create pg-network
+
+# run container with network
+docker run -it \
+-e POSTGRES_USER="root" \               # environment variables
+-e POSTGRES_PASSWORD="root" \
+-e POSTGRES_DB="ny_taxi" \
+-v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \       # volume
+-p 5432:5432 \                          # port
+--network=pg-network \                  # network
+--name pg-database \                    # container name
+postgres:13                             # image
+
+# run pgadmin4 with network
+docker run -it \
+-e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+-e PGADMIN_DEFAULT_PASSWORD="root" \
+-p 8080:80 \
+--network=pg-network \
+--name pgadmin \
+dpage/pgadmin4
+
+# ingest command
+python ingest_data.py \
+--user=root \
+--password=root \
+--host=localhost \
+--port=5432 \
+--db=ny_taxi \
+--table_name=green_taxi_trips \
+--url=https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-01.csv.gz
+
+# dockerize ingest script
+docker build -t taxi_ingest:001 .
+
+# run dockerized ingest script
+docker run -it \
+--network=pg-network \
+taxi_ingest:001 \
+--user=root \
+--password=root \
+--host=pg-database \
+--port=5432 \
+--db=ny_taxi \
+--table_name=green_taxi_trips \
+--url=https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-01.csv.gz
+
+# run docker compose script
+docker compose up
+
+# shutdown docker compose
+docker compose down
