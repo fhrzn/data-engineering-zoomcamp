@@ -1,2 +1,6 @@
 ny_taxi_postgres_data
 *.csv
+*.json
+*.lock.*
+.terraform-version
+.terraform/
